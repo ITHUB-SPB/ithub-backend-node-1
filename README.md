@@ -1,157 +1,418 @@
-# Assignment: Node.js Fundamentals
+# Assignment: Data Processing CLI
 
 ## Description
 
-Your task is to complete several tasks to learn Node.js core APIs. Each subtask is a standalone exercise in a dedicated file inside the corresponding subfolder of `src/`.
+Your task is to build a **Data Processing Toolkit** — an interactive command-line application that performs various useful data processing operations. The tool should work as a persistent Node.js process that accepts commands.
+
+Unlike the Node.js Basics assignment where you practiced APIs in isolation, here you will combine them into a real, cohesive tool with interactive file system navigation and data processing capabilities.
 
 ## Technical requirements
 
 - Any external tools and libraries are prohibited
 - Use 24.x.x version (24.10.0 or upper) of Node.js
-- Don't change the signature of pre-written functions (e.g. don't rename them, don't make them synchronous, etc.)
+- All file operations must use **Streams API** for efficiency (do not read entire files into memory)
 - Prefer asynchronous API whenever possible
+- The program should be an interactive REPL (Read-Eval-Print Loop)
+- File paths in commands can be relative or absolute
 
-## Subtasks
+## CLI Interface
 
-### File System (src/fs)
+The program is started via npm-script `start`:
 
-You should implement several functions in dedicated files:
+```bash
+npm run start
+```
 
-- `snapshot.js` — implement function that recursively scans the `workspace` directory and writes a `snapshot.json` file next to it. The JSON file should contain `rootPath` and a flat `entries` array with file contents:
-  ```json
-  {
-    "rootPath": "/home/user/workspace",
-    "entries": [
-      { "path": "file1.txt", "type": "file", "size": 1024, "content": "file contents as base64 string" },
-      { "path": "subdir", "type": "directory" },
-      { "path": "subdir/nested.txt", "type": "file", "size": 512, "content": "nested file contents as base64 string" }
-    ]
-  }
-  ```
-  `rootPath` is an absolute path to the original `workspace` directory. `entries[].path` values should be relative to `workspace`. Size is in bytes (only for files). File contents should be stored as base64-encoded strings. If `workspace` doesn't exist, `Error` with message `FS operation failed` must be thrown.
+Which runs:
 
-- `restore.js` — implement function that reads `snapshot.json` and recreates the directory/file structure described in it inside a `workspace_restored` folder. Directories should be created, files should be recreated with their original content (decoded from base64). `rootPath` from snapshot should be treated as metadata and must not affect restore destination. If `snapshot.json` doesn't exist, `Error` with message `FS operation failed` must be thrown. If `workspace_restored` already exists, `Error` with message `FS operation failed` must be thrown.
+```bash
+node src/main.js
+```
 
-- `findByExt.js` — implement function that recursively finds all files with a specific extension inside the `workspace` directory and prints their relative paths sorted alphabetically, one per line. The extension is provided as a CLI argument `--ext <extension>` (e.g. `--ext txt` or `--ext js`). If the `--ext` argument is not provided, default to `.txt`. If `workspace` doesn't exist, `Error` with message `FS operation failed` must be thrown.
+The program should:
+- Display a welcome message on startup: `Welcome to Data Processing CLI!`
+- Print the current working directory initially: `You are currently in /path/to/home`
+- Continuously prompt the user to enter commands: `>`
+- Accept commands in the format: `<command> [arguments]`
+- Display error messages for unknown or invalid commands without crashing
+- Allow users to exit with `.exit` command or `Ctrl+C`
+- Display a goodbye message on exit: `Thank you for using Data Processing CLI!`
+- After each successful operation, print the current working directory again
+- At the start of the program, working directory should be the user's home directory
 
-- `merge.js` — implement function that concatenates text files and writes the result to `workspace/merged.txt`.
-  - Default behavior: read all `.txt` files from `workspace/parts` in alphabetical order by filename.
-  - Optional behavior: if CLI argument `--files <filename1,filename2,...>` is provided, merge only those files from `workspace/parts` in the provided order.
-  - If `--files` is provided, it takes precedence over automatic `.txt` discovery.
-  - If the `parts` folder doesn't exist, contains no `.txt` files (for default mode), or any requested file from `--files` does not exist, `Error` with message `FS operation failed` must be thrown.
+If a command is unknown, invalid, or has missing required arguments, the program should print an error message like `Invalid input` and prompt for a new command.
 
+If an operation fails, the program should print `Operation failed` and prompt for a new command.
 
-### Modules (src/modules)
+## Commands
 
-You should implement a function in a dedicated file:
+### Navigation & Working Directory Commands
 
-- `dynamic.js` — implement a function that accepts a plugin name as a command line argument and dynamically imports the corresponding module from the `plugins/` subdirectory. Each plugin module exports a `run()` function that returns a string. After importing, call `run()` and print the result. Three plugins are pre-created: `uppercase.js`, `reverse.js`, `repeat.js`. If the plugin doesn't exist, print `Plugin not found` and exit with code 1.
+#### `up` — Move up one directory level
 
-### Hash (src/hash)
+```bash
+up
+```
 
-You should implement a function in a dedicated file:
+**Behavior:**
+- Moves up one directory level from the current working directory
+- If already in the root directory, does nothing (no error)
+- After successful navigation, prints the new current working directory path
 
-- `verify.js` — implement function that reads a `checksums.json` file containing an object where keys are filenames and values are expected SHA256 hex hashes:
-  ```json
-  {
-    "file1.txt": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-    "file2.txt": "486ea46224d1bb4fb680f34f7c9ad96a8f24ec88be73ea8e5a6c65260e9cb8a7"
-  }
-  ```
-  For each file listed, calculate its actual SHA256 hash using Streams API and print the result:
-  ```
-  file1.txt — OK
-  file2.txt — FAIL
-  ```
-  If `checksums.json` doesn't exist, `Error` with message `FS operation failed` must be thrown.
+#### `cd` — Change to a specified directory
 
-### Streams (src/streams)
+```bash
+cd path_to_directory
+```
 
-You should implement several functions in dedicated files:
+- `path_to_directory` — relative or absolute path to navigate to (**required**)
 
-- `lineNumberer.js` — implement function that reads data from `process.stdin`, prepends each line with its line number (starting from 1) using a Transform Stream, and writes the result to `process.stdout`. Example: input `hello\nworld` → output `1 | hello\n2 | world`
+**Behavior:**
+- Navigates to the specified directory
+- Can accept both relative and absolute paths
+- If path doesn't exist or is not a directory, prints `Operation failed` and stays in current directory
+- If successful, prints the new current working directory path
 
-- `filter.js` — implement function that reads data from `process.stdin`, filters only lines that contain a pattern (given as a CLI argument `--pattern <string>`), and writes matching lines to `process.stdout` using a Transform Stream
+#### `ls` — List files and directories in current directory
 
-- `split.js` — implement function that reads file `source.txt` using a Readable Stream and splits it into chunk files: `chunk_1.txt`, `chunk_2.txt`, etc. Each chunk should contain at most N lines (N is given as a CLI argument `--lines <number>`, default: 10). Must use Streams API.
+```bash
+ls
+```
 
-### Zlib (src/zip)
+**Output:**
+- A list of all files and folders in the current directory
+- Folders listed first, then files, all in alphabetical order
+- Each entry shows the name (with extension for files) and type (file or folder)
 
-You should implement several functions in dedicated files:
+**Example:**
+```
+folder1    [folder]
+folder2    [folder]
+file1.txt  [file]
+file2.md   [file]
+```
 
-- `compressDir.js` — implement function that reads all files from the `workspace/toCompress/` directory, recursively compresses the entire directory structure (preserving directory paths and file names) into a single `.br` archive file `archive.br` and saves it to `workspace/compressed/` directory (creating it if it doesn't exist). Must use Streams API. If `toCompress` doesn't exist, `Error` with message `FS operation failed` must be thrown.
+### Data Processing Commands
 
-- `decompressDir.js` — implement function that reads the `archive.br` file from `workspace/compressed/`, decompresses it, and extracts the original directory structure with all files to `workspace/decompressed/` directory (creating it if it doesn't exist). The decompressed content must match the original. If `compressed` doesn't exist or `archive.br` doesn't exist, `Error` with message `FS operation failed` must be thrown.
+#### 1. `csv-to-json` — Convert CSV to JSON
 
-### Worker Threads (src/wt)
+Convert a CSV file to a JSON file using Streams.
 
-You should implement several functions in dedicated files:
+```bash
+csv-to-json --input data.csv --output data.json
+```
 
-- `worker.js` — implement a function that receives an array of numbers from the main thread, sorts them in ascending order, and sends the sorted array back to the main thread
+- `--input` — path to the input CSV file (**required**)
+- `--output` — path to the output JSON file (**required**)
 
-- `main.js` — implement function that reads a JSON file `data.json` containing an array of numbers (e.g. `[5, 3, 8, 1, 9, 2, ...]`). The function should:
-  1. Split the array into N chunks (where N = number of logical CPU cores)
-  2. Create N worker threads from `worker.js`, sending one chunk to each
-  3. Collect sorted chunks from all workers
-  4. Merge the sorted chunks into a single sorted array (using k-way merge algorithm)
-  5. Log the final sorted array to the console
+**Behavior:**
+- The first line of the CSV file is treated as headers
+- Each subsequent line becomes a JSON object with header names as keys
+- The output file should contain a JSON array of objects
+- Must use Readable Stream → Transform Stream → Writable Stream pipeline
+- Paths are relative to the current working directory or can be absolute
+- If the input file doesn't exist, print `Operation failed`
 
-  The results must be collected in the same order as workers were created.
+**Example:**
 
-### Child Processes (src/cp)
+Input `data.csv`:
+```
+name,age,city
+Alice,30,New York
+Bob,25,London
+```
 
-You should implement a function in a dedicated file:
+Output `data.json`:
+```json
+[
+  { "name": "Alice", "age": "30", "city": "New York" },
+  { "name": "Bob", "age": "25", "city": "London" }
+]
+```
 
-- `execCommand.js` — implement function `execCommand` that takes a command string as a CLI argument (e.g. `node src/cp/execCommand.js "ls -la"`), spawns it as a child process using `spawn`, and:
-  - pipes the child's `stdout` to `process.stdout`
-  - pipes the child's `stderr` to `process.stderr`
-  - passes environment variables from the parent process to the child process
-  - when the child exits, the parent process exits with the same exit code
+#### 2. `json-to-csv` — Convert JSON to CSV
 
+Convert a JSON file (array of objects) to a CSV file using Streams.
 
-# Scoring: Node.js Fundamentals
+```bash
+json-to-csv --input data.json --output data.csv
+```
 
-Max total score: 200
+- `--input` — path to the input JSON file (**required**)
+- `--output` — path to the output CSV file (**required**)
 
-## Check
+**Behavior:**
+- Input must be a JSON array of objects
+- The first line of the output is the headers (keys from the first object)
+- Each object becomes a CSV row
+- Paths are relative to the current working directory or can be absolute
+- If the input file doesn't exist or contains invalid JSON, print `Operation failed`
 
-For check simplification you have npm-scripts in `package.json`.
-NB! Some scripts have predefined data (e.g. environment variables, CLI arguments). Feel free to change it during the check if necessary.
+#### 3. `count` — Count lines, words, and characters in txt file
+
+Count lines, words, and characters in a file (similar to the `wc` command).
+
+```bash
+count --input file.txt
+```
+
+- `--input` — path to the input file (**required**)
+
+**Output format:**
+```
+Lines: 42
+Words: 350
+Characters: 2048
+```
+
+**Behavior:**
+- Must use Streams API to process the file (do not load the entire file into memory)
+- A word is any sequence of non-whitespace characters
+- Paths are relative to the current working directory or can be absolute
+- If the input file doesn't exist, print `Operation failed`
+
+#### 4. `hash` — Calculate file hash
+
+Calculate a cryptographic hash of a file.
+
+```bash
+hash --input file.txt
+hash --input file.txt --algorithm md5
+hash --input file.txt --save
+```
+
+- `--input` — path to the input file (**required**)
+- `--algorithm` — hash algorithm to use (optional, default: `sha256`). Supported values: `sha256`, `md5`, `sha512`
+- `--save` — optional flag; if provided, save hash to a file next to the source file
+
+**Output format:**
+```
+sha256: 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+```
+
+**Behavior:**
+- Must use `crypto.createHash` with Streams API
+- Paths are relative to the current working directory or can be absolute
+- If the input file doesn't exist, print `Operation failed`
+- If the algorithm is not supported, print `Operation failed`
+- If `--save` is passed, write hash to `<inputFilename>.<algorithm>` (example: `file.txt.sha256`)
+
+#### 5. `hash-compare` — Compare file hash with expected hash
+
+Calculate file hash and compare it with a value stored in a hash file.
+
+```bash
+hash-compare --input file.txt --hash file.txt.sha256
+hash-compare --input file.txt --hash file.txt.md5 --algorithm md5
+```
+
+- `--input` — path to the input file (**required**)
+- `--hash` — path to file with expected hash (**required**)
+- `--algorithm` — hash algorithm to use (optional, default: `sha256`). Supported values: `sha256`, `md5`, `sha512`
+
+**Output format:**
+```
+OK
+```
+or
+```
+MISMATCH
+```
+
+**Behavior:**
+- Must calculate hash of `--input` using Streams API
+- Must read expected hash value from `--hash` file
+- Comparison should be case-insensitive and ignore trailing newline in hash file
+- Paths are relative to the current working directory or can be absolute
+- If input or hash file doesn't exist, print `Operation failed`
+- If algorithm is not supported, print `Operation failed`
+
+#### 6. `encrypt` — Encrypt a file
+
+Encrypt a file using `AES-256-GCM`.
+
+```bash
+encrypt --input file.txt --output file.txt.enc --password mySecret
+```
+
+- `--input` — path to the input file (**required**)
+- `--output` — path to the output encrypted file (**required**)
+- `--password` — password used to derive the encryption key (**required**)
+
+**Output file format (binary):**
+- First 16 bytes: `salt`
+- Next 12 bytes: `iv`
+- Then: `ciphertext`
+- Last 16 bytes: `authTag`
+
+**Behavior:**
+- Must derive a 32-byte key from `password` and `salt`
+- Must encrypt using `AES-256-GCM`
+- Must use Streams API end-to-end
+- You must not load the full file into memory. The only allowed in-memory buffering is:
+  - the header (first 28 bytes = `salt` + `iv`)
+  - the authentication tag (last 16 bytes)
+- Paths are relative to the current working directory or can be absolute
+- If the input file doesn't exist, print `Operation failed`
+
+#### 7. `decrypt` — Decrypt a file
+
+Decrypt a file produced by `encrypt`.
+
+```bash
+decrypt --input file.txt.enc --output file.txt --password mySecret
+```
+
+- `--input` — path to the input encrypted file (**required**)
+- `--output` — path to the output file (**required**)
+- `--password` — password used to derive the encryption key (**required**)
+
+**Behavior:**
+- Must parse `salt` (first 16 bytes) and `iv` (next 12 bytes) from the input
+- Must parse `authTag` (last 16 bytes) from the input
+- Must decrypt using `AES-256-GCM` with authentication tag verification
+- Must use Streams API end-to-end
+- The decrypted result must match the original file content exactly
+- Paths are relative to the current working directory or can be absolute
+- If the input file doesn't exist or auth fails, print `Operation failed`
+
+#### 8. `log-stats` — Analyze a large log file using Worker Threads
+
+Compute statistics for a large log file using Worker Threads for parallel processing.
+
+```bash
+log-stats --input logs.txt --output stats.json
+```
+
+- `--input` — path to the input log file (**required**)
+- `--output` — path to the output JSON file (**required**)
+
+**Log line format (space-separated):**
+```
+<isoTimestamp> <level> <service> <statusCode> <responseTimeMs> <method> <path>
+```
+
+**Example line:**
+```
+2026-02-01T12:34:56.789Z INFO user-service 200 123 GET /api/users
+```
+
+**Output format (JSON):**
+```
+{
+  "total": 1000,
+  "levels": { "INFO": 700, "WARN": 200, "ERROR": 100 },
+  "status": { "2xx": 800, "3xx": 50, "4xx": 120, "5xx": 30 },
+  "topPaths": [
+    { "path": "/api/users", "count": 120 },
+    { "path": "/api/orders", "count": 95 }
+  ],
+  "avgResponseTimeMs": 137.42
+}
+```
+
+**Behavior:**
+1. Split the input file into N chunks (where N = number of CPU cores), ensuring chunks start and end on line boundaries
+2. Send each chunk to a Worker Thread for parsing and partial aggregation
+3. Each Worker returns partial stats: counts by level, counts by status class, path counts, total lines, response time sum
+4. The main thread merges partial stats and computes final `avgResponseTimeMs`
+5. Write the JSON result to the output file
+
+- Must use Worker Threads for parallel processing
+- The number of workers should equal the number of logical CPU cores
+- Paths are relative to the current working directory or can be absolute
+- If the input file doesn't exist, print `Operation failed`
+
+**Test data generator:**
+Use the provided script to generate a large log file for testing:
+
+```bash
+node scripts/generate-logs.js --output workspace/logs.txt --lines 500000
+```
+
+## Project Structure
+
+```
+src/
+  main.js          — entry point, sets up REPL, handles navigation state
+  repl.js          — REPL handler, command parsing and dispatching
+  navigation.js    — navigation commands (up, cd, ls)
+  commands/
+    csvToJson.js   — csv-to-json command handler
+    jsonToCsv.js   — json-to-csv command handler
+    count.js       — count command handler
+    hash.js        — hash command handler
+    hashCompare.js — hash-compare command handler
+    encrypt.js     — encrypt command handler
+    decrypt.js     — decrypt command handler
+    logStats.js    — log-stats command handler
+  workers/
+    logWorker.js   — worker thread for log-stats command
+  utils/
+    pathResolver.js  — resolve paths relative to current working directory
+    argParser.js     — parse command line arguments
+```
+
+## Hints
+
+- Use `readline` module for interactive input
+- Use `stream.pipeline` (from `stream/promises`) to connect streams and handle errors properly
+- For CSV parsing in the Transform stream, handle the first line (headers) separately from data lines
+- For `json-to-csv`, you'll need to buffer the JSON input to parse it, but write the CSV output via a stream
+- For `log-stats`, make sure chunks start/end on line boundaries to avoid partial log lines
+- For merging stats, sum counters and merge path maps before computing `topPaths`
+- Always resolve file paths relative to the current working directory before performing operations
+- Use `path.resolve()` to combine current working directory with relative paths
+- Use `process.cwd()` is NOT appropriate here - maintain your own current working directory variable
+- Maintain the current working directory as application state throughout the session
+
+# Scoring: Data Processing CLI
+
+Max total score: 250
+
 
 ## Basic Scope
 
-- File System (src/fs)
-    - **+10** `snapshot.js` implemented properly (recursive scan, correct JSON structure with path/type/size)
-    - **+10** `restore.js` implemented properly (reads snapshot, recreates structure)
-    - **+6** `findByExt.js` implemented properly (recursive search, sorted output)
-    - **+6** `merge.js` implemented properly (reads .txt files in order, concatenates, writes result)
-- CLI (src/cli)
-    - **+10** `interactive.js` implemented properly (readline prompt, supports uptime/cwd/date/exit commands, handles Ctrl+C)
-    - **+10** `progress.js` implemented properly (in-place updating progress bar, 0-100% over ~5 seconds)
-    - **+6** `progress.js` supports `--color <hex>` (`#RRGGBB`), applies color only to filled segment, and resets ANSI style correctly
-- Modules (src/modules)
-    - **+10** `dynamic.js` implemented properly (dynamic import from plugins/, calls run(), handles missing plugin)
-- Hash (src/hash)
-    - **+12** `verify.js` implemented properly (reads checksums.json, calculates SHA256 via Streams, prints OK/FAIL per file)
-- Streams (src/streams)
-    - **+10** `lineNumberer.js` implemented properly (Transform stream, prepends line numbers)
-    - **+10** `filter.js` implemented properly (Transform stream, filters by pattern from CLI arg)
-    - **+10** `split.js` implemented properly (Readable stream, splits file into chunks by line count)
-- Zlib (src/zip)
-    - **+10** `compressDir.js` implemented properly (reads all files from workspace/toCompress/, recursively compresses entire directory structure into single .br archive, saves to workspace/compressed/)
-    - **+10** `decompressDir.js` implemented properly (reads archive.br from workspace/compressed/, decompresses and extracts to workspace/decompressed/, result matches original)
+- **+6** Application starts with npm run start and displays welcome message
+- **+10** Application exits gracefully with `.exit` command or `Ctrl+C` and displays goodbye message
+- **+6** Current working directory is printed at startup and after each successful operation
+- **+10** Unknown or invalid commands display `Invalid input` and application continues running
+- **+10** Operations that fail display `Operation failed` and application continues running
+
+### Navigation Commands
+- **+8** `up` command moves up one directory level correctly
+- **+8** `cd` command navigates to specified directory (both relative and absolute paths)
+- **+12** `ls` command lists files and folders with proper sorting (folders first, then files, alphabetically)
+
+### Data Processing Commands
+- **+20** `csv-to-json` command works correctly (headers parsed, rows converted to objects, output is valid JSON array, uses Streams)
+- **+20** `json-to-csv` command works correctly (headers from object keys, values as rows, uses Streams)
+- **+12** `count` command works correctly (lines, words, characters counted via Streams, output format matches specification)
+- **+12** `hash` command works correctly (SHA256 by default, supports `md5` and `sha512` via `--algorithm` option, uses Streams, supports `--save` to write hash file next to input)
+- **+8** `encrypt` command works correctly (AES-256-GCM, key derivation from password+salt, Streams, output format matches spec)
+- **+8** `decrypt` command works correctly (AES-256-GCM, key derivation from password+salt, Streams, authTag verified, result matches original)
+
+### Path Resolution
+- **+16** All file paths in commands are correctly resolved relative to current working directory
+- **+10** All file operations properly handle errors (non-existent files, invalid paths, permission errors)
 
 ## Advanced Scope
 
-- Worker Threads (src/wt)
-    - **+10** `worker.js` implemented properly (receives array, returns sorted array)
-    - **+30** `main.js` implemented properly (reads data.json, splits by CPU count, distributes to workers, k-way merges results)
-- Child Processes (src/cp)
-    - **+10** `execCommand.js` spawns child process from CLI argument
-    - **+10** child process stdout/stderr piped to parent stdout/stderr
-    - **+10** parent exits with the same exit code as child
+- **+28** `log-stats` command works correctly:
+    - **+6** File is split into chunks equal to the number of CPU cores (line boundaries preserved)
+    - **+10** Each chunk is processed in a separate Worker Thread
+    - **+6** Partial stats are merged correctly (counters, maps, totals)
+    - **+6** Final output JSON matches the specification
+- **+16** Project structure follows the specification (separate files for navigation, commands, utilities, worker)
+- **+20** Interactive REPL implementation:
+    - **+10** Maintains application state (current working directory) across commands
+    - **+10** Properly handles readline for continuous command input
+- **+10** `hash-compare` command works correctly (reads expected hash from file, computes current hash with selected algorithm, returns `OK` / `MISMATCH`)
 
 ## Forfeits
 
 - **-95% of total task score** Any external tools/libraries are used
 - **-30% of total task score** Commits after deadline (except commits that affect only Readme.md, .gitignore, etc.)
+- **-20** Missing PR or its description is incorrect
+- **-20** No separate development branch
+- **-20** Less than 3 commits in the development branch, not including commits that make changes only to `Readme.md` or similar files (`tsconfig.json`, `.gitignore`, `.prettierrc.json`, etc.)
