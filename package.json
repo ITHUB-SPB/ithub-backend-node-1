@@ -1,12 +1,12 @@
 {
-  "name": "example-2-esm",
+  "name": "example-3-fs",
   "version": "1.0.0",
   "license": "ISC",
   "type": "module",
   "main": "src/app.js",
-  "types": "./src/math.d.ts",
   "scripts": {
     "start": "node src/app.js",
+    "start:promise": "node src/app-promise.js",
     "test": "node --test"
   }
 }
