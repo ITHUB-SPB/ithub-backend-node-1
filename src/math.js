@@ -2,10 +2,10 @@ function add(a, b) {
     return a + b
 }
 
-function subtract(a, b) {
+export function subtract(a, b) {
     return a - b
 }
 
 const PI = 3.14
 
-module.exports = { sum: add, subtract, PI }
+export { PI, add as sum }

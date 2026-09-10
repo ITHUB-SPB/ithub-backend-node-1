@@ -1,15 +1,9 @@
 {
-  "name": "example",
+  "name": "example-2-esm",
   "version": "1.0.0",
-  "description": "first node project",
-  "keywords": [
-    "node",
-    "fs"
-  ],
   "license": "ISC",
-  "author": "Ivan Ivanov <ivan@example.com>",
-  "type": "commonjs",
-  "main": "index.js",
+  "type": "module",
+  "main": "src/app.js",
   "types": "./src/math.d.ts",
   "scripts": {
     "start": "node src/app.js",

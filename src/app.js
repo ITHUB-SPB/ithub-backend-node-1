@@ -1,6 +1,7 @@
-const math = require('./math.js') // ВАРИАНТ 1
-// const { sum, subtract, PI } = require('./math.js') // ВАРИАНТ 2
-const Logger = require('./logger.js')
+// import { add, subtract, PI } from './math.js' // ВАРИАНТ 1
+import * as math from './math.js' // ВАРИАНТ 2
+
+import Logger from './logger.cjs'
 
 const logger = new Logger()
 
