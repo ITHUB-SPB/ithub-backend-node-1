@@ -5,8 +5,8 @@
   "type": "module",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "start:promise": "node src/app-promise.js",
-    "test": "node --test"
+    "start:read": "node src/readable.js",
+    "start:write": "node src/writeable.js",
+    "start:pipe": "node src/pipe.js"
   }
 }
