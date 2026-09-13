@@ -1,0 +1,5 @@
+const lineNumberer = () => {
+  // TODO
+};
+
+lineNumberer();
