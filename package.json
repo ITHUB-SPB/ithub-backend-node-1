@@ -1,0 +1,14 @@
+{
+  "name": "ithub-backend-node-1",
+  "type": "module",
+  "scripts": {
+    "start": "node ./src/main.js"
+  },
+  "dependencies": {
+    "undici-types": "^8.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "typescript": "^7.0.2"
+  }
+}
