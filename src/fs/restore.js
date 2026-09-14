@@ -7,12 +7,13 @@ const restore = async () => {
     for(const filename of result){
       const failpath = filename.path
       if(path.extname(failpath) === ''){
-        await fs.writeFile('')
-        onsole.log(f)
+        let fullpath = path.join("./data", failpath);
+        await fs.mkdir(fullpath, { recursive: true });
+        console.log("kk")
       }
       else{
-        await fs.writeFile
-        onsole.log(g)
+        //
+        console.log("gg")
       }
     }
   }catch (error){
