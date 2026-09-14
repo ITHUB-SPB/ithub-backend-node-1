@@ -8,9 +8,9 @@
   },
   "type": "module",
   "scripts": {
-    "snapshot": "node src/fs/snapshot.ts",
-    "restore": "node src/fs/restore.ts",
-    "liner": "echo 'hello\nworld' | node src/streams/liner.ts",
+    "snapshot": "node src/fs/snapshot.js",
+    "restore": "node src/fs/restore.js",
+    "liner": "node src/streams/liner.js",
     "filter": "echo 'hello\nworld\ntest' | node src/streams/filter.ts --pattern test",
     "splitter": "node src/streams/splitter.ts --lines 10"
   },

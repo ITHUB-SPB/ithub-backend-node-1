@@ -1,5 +1,0 @@
-const lineNumberer = () => {
-  // TODO
-};
-
-lineNumberer();

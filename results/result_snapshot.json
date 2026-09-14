@@ -1,0 +1,21 @@
+{
+    "rootPath": "/Users/igorsvarc/Desktop/3/node/kt1/ithub-backend-node-1/workspace",
+    "entries": [
+        {
+            "path": "file1.txt",
+            "type": "file",
+            "size": 8,
+            "content": "MTIzNDEyMzQ="
+        },
+        {
+            "path": "subdir",
+            "type": "directory"
+        },
+        {
+            "path": "subdir/nested.txt",
+            "type": "file",
+            "size": 16,
+            "content": "MTIzNDEyMzQxMjM0MTIzNA=="
+        }
+    ]
+}
