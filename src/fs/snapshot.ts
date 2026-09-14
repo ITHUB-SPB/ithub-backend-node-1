@@ -7,7 +7,7 @@ const snapshot = async () => {
     const files = await readdir(workspace, { withFileTypes: true, recursive: true })
     const promises = files.map(async (file) => {
       const fullPath = path.join(file.parentPath, file.name)
-      const data = file.isFile() ? await (await readFile(fullPath)).toString('base64') : null
+      const data = file.isFile() ? (await readFile(fullPath)).toString('base64') : null
       const filetype = file.isFile() ? "file" : "directory"
       return {
         path: path.relative(workspace, fullPath),
