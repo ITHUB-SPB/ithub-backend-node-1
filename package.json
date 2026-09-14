@@ -15,7 +15,7 @@
     "splitter": "node src/streams/splitter.ts --lines 10"
   },
   "devDependencies": {
-    "@types/node": "^26.5.1",
+    "@types/node": "^24",
     "typescript": "^7.0.2"
   }
 }
