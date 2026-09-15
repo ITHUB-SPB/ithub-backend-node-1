@@ -5,19 +5,22 @@ const restore = async () => {
   try{
     const result = JSON.parse(await fs.readFile('./src/fs/snapshot.json', 'utf-8'))
     for(const filename of result){
-      const failpath = filename.path
+      let normalizedPath = path.normalize(filename.path)
+      let failpath = filename.path
       if(path.extname(failpath) === ''){
-        let fullpath = path.join("./data", failpath);
+         let fullpath = path.join("./data", failpath);
         await fs.mkdir(fullpath, { recursive: true });
-        console.log("kk")
+        console.log("создана папка")
       }
       else{
-        //
-        console.log("gg")
+        let base64Content = filename.content
+        let textContent = Buffer.from(base64Content, 'base64').toString('utf-8');
+        await fs.writeFile(normalizedPath, textContent)
+        console.log("создан файл")
       }
     }
   }catch (error){
-    console.error(error)
+    console.error("не существует файл snapshot.json")
   }
 };
 

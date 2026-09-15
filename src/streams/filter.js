@@ -1,5 +1,5 @@
 const filter = () => {
-  // TODO
-};
+
+}
 
 filter();
