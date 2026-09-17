@@ -11,7 +11,7 @@
     "snapshot": "node src/fs/snapshot.js",
     "restore": "node src/fs/restore.js",
     "liner": "node src/streams/liner.js",
-    "filter": "echo 'hello\nworld\ntest' | node src/streams/filter.ts --pattern test",
+    "filter": "echo 'hello\nworld\ntest' | node src/streams/filter.js --pattern test",
     "splitter": "node src/streams/splitter.ts --lines 10"
   },
   "devDependencies": {

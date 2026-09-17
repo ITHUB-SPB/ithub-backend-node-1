@@ -1,5 +1,4 @@
 import fs from "node:fs/promises";
-import { type } from "node:os";
 import path from "node:path";
 
 const workspace = "./workspace";
