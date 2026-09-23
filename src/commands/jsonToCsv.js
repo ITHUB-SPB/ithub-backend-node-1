@@ -10,7 +10,7 @@ export async function jsonToCsv(input, output) {
     let data = '';
 
     const transform = new Transform({
-        transform(chunk, encoding, callback) {
+        transform(chunk, _encoding, callback) {
             data += chunk.toString();
             callback();
         },
@@ -18,23 +18,18 @@ export async function jsonToCsv(input, output) {
         flush(callback) {
             try {
                 const objects = JSON.parse(data);
-
-                if (!Array.isArray(objects) || objects.length === 0) {
-                    throw new Error();
-                }
-
                 const headers = Object.keys(objects[0]);
 
                 this.push(headers.join(',') + '\n');
 
                 for (const object of objects) {
-                    const values = headers.map(header => object[header] ?? '');
+                    const values = headers.map(header => object[header]);
                     this.push(values.join(',') + '\n');
                 }
 
                 callback();
-            } catch {
-                callback(new Error());
+            } catch (error) {
+                callback(error instanceof Error ? error : new Error());
             }
         }
     });
