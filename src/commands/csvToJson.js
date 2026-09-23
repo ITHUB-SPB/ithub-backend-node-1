@@ -7,71 +7,39 @@ import { pipeline } from 'node:stream/promises';
  * @param {string} output
  */
 export async function csvToJson(input, output) {
-    /** @type {string[]} */
-    let headers = [];
-
-    let buffer = '';
-    let firstLine = true;
-    let firstObject = true;
+    let data = '';
 
     const transform = new Transform({
-        transform(chunk, encoding, callback) {
-            void encoding;
-            buffer += chunk.toString();
-
-            const lines = buffer.split('\n');
-            buffer = lines.pop() ?? '';
-
-            for (const line of lines) {
-                if (!line.trim()) continue;
-
-                const values = line.trim().split(',');
-
-                if (firstLine) {
-                    headers = values;
-                    firstLine = false;
-                    this.push('[\n');
-                    continue;
-                }
-
-                /** @type {Record<string, string>} */
-                const obj = {};
-
-                headers.forEach((header, index) => {
-                    obj[header] = values[index] ?? '';
-                });
-
-                if (!firstObject) {
-                    this.push(',\n');
-                }
-
-                this.push(`  ${JSON.stringify(obj)}`);
-                firstObject = false;
-            }
-
+        transform(chunk, _encoding, callback) {
+            data += chunk.toString();
             callback();
         },
 
         flush(callback) {
-            if (buffer.trim()) {
-                const values = buffer.trim().split(',');
+            try {
+                const lines = data.trim().split(/\r?\n/);
+                const headers = (lines.shift() ?? '').split(',');
 
-                /** @type {Record<string, string>} */
-                const obj = {};
+                const result = [];
 
-                headers.forEach((header, index) => {
-                    obj[header] = values[index] ?? '';
-                });
+                for (const line of lines) {
+                    const values = line.split(',');
 
-                if (!firstObject) {
-                    this.push(',\n');
+                    /** @type {Record<string, string>} */
+                    const object = {};
+
+                    headers.forEach((header, index) => {
+                        object[header] = values[index] ?? '';
+                    });
+
+                    result.push(object);
                 }
 
-                this.push(`  ${JSON.stringify(obj)}`);
+                this.push(JSON.stringify(result, null, 2));
+                callback();
+            } catch (error) {
+                callback(error instanceof Error ? error : new Error());
             }
-
-            this.push('\n]\n');
-            callback();
         }
     });
 
