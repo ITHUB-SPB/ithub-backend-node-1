@@ -1,119 +1,73 @@
-import { csvToJson } from './commands/csvToJson.js';
-import { jsonToCsv } from './commands/jsonToCsv.js';
-import { calculateHash } from './commands/hash.js';
-import { compareHash } from './commands/hashCompare.js';
+import fs from 'node:fs'
+import { Transform } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 
 /**
- * @typedef {Object} CommandOptions
- * @property {string} [input]
- * @property {string} [output]
- * @property {string} [hash]
- * @property {boolean} [save]
+ * @param {string} input
+ * @param {string} output
  */
-
-/**
- * @param {string[]} args
- * @returns {CommandOptions}
- */
-function parseArguments(args) {
-    /** @type {CommandOptions} */
-    const options = {};
-
-    for (let i = 0; i < args.length; i += 1) {
-        const argument = args[i];
-
-        if (argument === undefined || !argument.startsWith('--')) {
-            continue;
-        }
-
-        const key = argument.slice(2);
-
-        if (key === 'save') {
-            options.save = true;
-            continue;
-        }
-
-        const value = args[i + 1];
-
-        if (value === undefined || value.startsWith('--')) {
-            throw new Error('Operation failed');
-        }
-
-        if (key === 'input') {
-            options.input = value;
-        } else if (key === 'output') {
-            options.output = value;
-        } else if (key === 'hash') {
-            options.hash = value;
-        } else {
-            throw new Error('Operation failed');
-        }
-
-        i += 1;
+export async function csvToJson(input, output) {
+    if (!input || !output) {
+        throw new Error('Operation failed')
     }
 
-    return options;
-}
+    /** @type {string[]} */
+    let headers = []
 
-/**
- * @param {CommandOptions} options
- * @param {'input' | 'output' | 'hash'} name
- * @returns {string}
- */
-function getRequiredOption(options, name) {
-    const value = options[name];
+    let firstLine = true
 
-    if (typeof value !== 'string' || value.length === 0) {
-        throw new Error('Operation failed');
-    }
+    /** @type {Record<string, string>[]} */
+    const result = []
 
-    return value;
-}
+    const transform = new Transform({
+        transform(chunk, _encoding, callback) {
+            try {
+                const lines = chunk.toString().split('\n')
 
-/**
- * @returns {Promise<void>}
- */
-async function main() {
-    const [command, ...args] = process.argv.slice(2);
-    const options = parseArguments(args);
+                for (let line of lines) {
+                    line = line.trim()
 
-    switch (command) {
-        case 'csv-to-json':
-            await csvToJson(
-                getRequiredOption(options, 'input'),
-                getRequiredOption(options, 'output'),
-            );
-            break;
+                    if (!line) {
+                        continue
+                    }
 
-        case 'json-to-csv':
-            await jsonToCsv(
-                getRequiredOption(options, 'input'),
-                getRequiredOption(options, 'output'),
-            );
-            break;
+                    if (firstLine) {
+                        headers = line.split(',')
+                        firstLine = false
+                        continue
+                    }
 
-        case 'hash': {
-            const input = getRequiredOption(options, 'input');
+                    const values = line.split(',')
 
-            await calculateHash(input, options.save === true);
-            break;
+                    /** @type {Record<string, string>} */
+                    const object = {}
+
+                    for (let i = 0; i < headers.length; i++) {
+                        object[headers[i] || ''] = values[i] || ''
+                    }
+
+                    result.push(object)
+                }
+
+                callback()
+            } catch (error) {
+                if (error instanceof Error) {
+                    callback(error)
+                } else {
+                    callback(new Error(String(error)))
+                }
+            }
+        },
+
+        flush(callback) {
+            this.push(JSON.stringify(result, null, 2))
+            callback()
         }
+    })
 
-        case 'hash-compare':
-            await compareHash(
-                getRequiredOption(options, 'input'),
-                getRequiredOption(options, 'hash'),
-            );
-            break;
-
-        default:
-            throw new Error('Operation failed');
-    }
-}
-
-try {
-    await main();
-} catch {
-    console.error('Operation failed');
-    process.exitCode = 1;
+    await pipeline(
+        fs.createReadStream(input),
+        transform,
+        fs.createWriteStream(output)
+    )
 }

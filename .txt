@@ -1,0 +1,3 @@
+0 name age city
+1 alica 30 new york
+2 bob 67 volgograd
